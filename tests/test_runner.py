@@ -23,7 +23,10 @@ def test_run_job_dedup_duplicate_title(app, client):
     assert summary["status"] == "done"
     assert summary["inserted"] == 2
     assert summary["skipped_dup"] == 1
-    assert summary["total_source"] == 3
+    # alpha 含一条空编码行：不占池、不进等池
+    assert summary["empty_code"] == 1
+    assert summary["waiting"] == 0
+    assert summary["total_source"] == 4
 
 
 def test_mock_catalog_http(client):

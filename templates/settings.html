@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}入库池设置{% endblock %}
+{% block body %}
+<section class="card">
+  <h1>当日入库池设置</h1>
+  <p class="muted">
+    全站共用一条当日入库池，池子是跨任务共享资源，不是单个任务自己的计数器。
+    后台日期：<strong>{{ today }}</strong>
+  </p>
+  <table class="pool-summary">
+    <thead>
+      <tr><th>池容量</th><th>今日已入</th><th>等池条数</th><th>当日口径名字</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>{{ overview.capacity }}</strong></td>
+        <td>{{ overview.used }} / {{ overview.capacity }}</td>
+        <td>{{ overview.waiting }}</td>
+        <td><span class="tag policy">{{ overview.policy_name }}</span></td>
+      </tr>
+    </tbody>
+  </table>
+  {% if overview.locked %}
+  <p class="notice warn">
+    当日口径已锁定为「{{ overview.policy_name }}」，当天禁止改口；
+    若在此切换别的切法并继续入账，后台会拦住并记录「切法不对」。
+  </p>
+  {% else %}
+  <p class="notice">今日尚未生成池快照，下面的容量与口径将在首次入账时写入当日生效口径。</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('settings.save_pool_settings') }}" class="stack-form">
+    <label>池容量（不填按 {{ default_capacity }}）
+      <input name="pool_capacity" type="number" min="1"
+             value="{{ settings.pool_capacity_input }}"
+             placeholder="不填按 {{ default_capacity }}" />
+    </label>
+    <fieldset class="policy-box">
+      <legend>分配规矩（选定后写入当日生效口径，当天禁止改口）</legend>
+      {% for code, name in policies.items() %}
+      <label class="radio">
+        <input type="radio" name="allocation_policy" value="{{ code }}"
+               {% if settings.allocation_policy == code %}checked{% endif %} />
+        <strong>{{ name }}</strong>
+        {% if code == 'equal' %}
+        <span class="muted">——多个任务抢同一天的池时按等待先后轮询均摊，禁止谁先点谁全拿。</span>
+        {% else %}
+        <span class="muted">——按任务声明的权重切分，权重大的任务每轮多拿，同轮仍按等待先后。</span>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">保存设置</button>
+  </form>
+  <p class="muted">
+    说明：池子按后台日期结算。跨日之后昨天的等池不会自动入账，必须到任务详情点「继续」，
+    继续时按新一天的池容量和当日口径重算；两个任务同时点继续时只允许一笔入账落地，
+    另一笔以池争用结束。编码为空的行既不占池也不进等池；跑着的任务不能再点继续。
+  </p>
+</section>
+{% endblock %}

@@ -3,6 +3,22 @@
 {% block body %}
 <section class="card">
   <h1>采集任务</h1>
+  <p class="muted">
+    全站共享当日入库池 · 后台日期 <strong>{{ overview.day }}</strong>
+  </p>
+  <table class="pool-summary">
+    <thead>
+      <tr><th>池容量</th><th>今日已入</th><th>等池条数</th><th>当日口径名字</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>{{ overview.capacity }}</strong></td>
+        <td>{{ overview.used }} / {{ overview.capacity }}</td>
+        <td>{{ overview.waiting }}</td>
+        <td><span class="tag policy">{{ overview.policy_name }}</span></td>
+      </tr>
+    </tbody>
+  </table>
   <form class="grid-form" method="post" action="{{ url_for('jobs.create_job') }}">
     <label>任务名 <input name="name" placeholder="例：alpha 目录首轮" required /></label>
     <label>种子路径
@@ -12,14 +28,20 @@
         {% endfor %}
       </select>
     </label>
+    <label>权重（按权重切分时使用）
+      <input name="weight" type="number" min="1" value="1" />
+    </label>
     <button type="submit">创建任务</button>
   </form>
 </section>
+
 <section class="card">
   <table>
     <thead>
       <tr>
-        <th>ID</th><th>名称</th><th>种子</th><th>状态</th><th>记录数</th><th></th>
+        <th>ID</th><th>名称</th><th>种子</th><th>状态</th><th>权重</th>
+        <th>记录数</th><th>池容量</th><th>今日已入</th><th>等池条数</th>
+        <th>当日口径名字</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -29,18 +51,48 @@
         <td>{{ j.name }}</td>
         <td><code>{{ j.seed_path }}</code></td>
         <td><span class="tag {{ j.status }}">{{ j.status }}</span></td>
+        <td>{{ j.weight }}</td>
         <td>{{ counts.get(j.id, 0) }}</td>
+        <td>{{ overview.capacity }}</td>
+        <td>{{ per_job[j.id].admitted_today }}</td>
+        <td>{{ per_job[j.id].waiting_today }}</td>
+        <td><span class="tag policy">{{ overview.policy_name }}</span></td>
         <td><a href="{{ url_for('jobs.detail', job_id=j.id) }}">详情</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="muted">尚无任务，请先创建</td></tr>
+      <tr><td colspan="11" class="muted">尚无任务，请先创建</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </section>
+
+<section class="card">
+  <h2>等池 <span class="muted">（候补栏：其它任务占池时，合法编码只能停在这里排队）</span></h2>
+  <table>
+    <thead>
+      <tr><th>排队顺序</th><th>后台日期</th><th>任务</th><th>合法编码</th><th>标题</th></tr>
+    </thead>
+    <tbody>
+      {% for w in waiting_rows %}
+      <tr>
+        <td>#{{ w.seq }}</td>
+        <td>{{ w.pool_day }}</td>
+        <td>{{ w.job_name }}（任务 {{ w.job_id }}）</td>
+        <td><code>{{ w.item_code }}</code></td>
+        <td>{{ w.title }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">等池为空：当前没有停在候补栏的合法编码</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 <p class="muted">Mock 站点可在新标签打开：
   <a href="{{ url_for('mock.catalog', catalog_id='alpha') }}" target="_blank">alpha</a>
   ·
   <a href="{{ url_for('mock.catalog', catalog_id='beta') }}" target="_blank">beta</a>
+  ·
+  <a href="{{ url_for('settings.settings_page') }}">入库池设置</a>
 </p>
 {% endblock %}

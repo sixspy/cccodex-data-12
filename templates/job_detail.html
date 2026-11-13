@@ -4,28 +4,98 @@
 <p><a href="{{ url_for('jobs.list_jobs') }}">← 返回列表</a></p>
 <section class="card">
   <h1>{{ job.name }}</h1>
-  <p>种子 <code>{{ job.seed_path }}</code> · 状态 <span class="tag {{ job.status }}">{{ job.status }}</span></p>
+  <p>
+    种子 <code>{{ job.seed_path }}</code> · 状态
+    <span class="tag {{ job.status }}">{{ job.status }}</span> · 权重 {{ job.weight }}
+  </p>
+  <table class="pool-summary">
+    <thead>
+      <tr><th>池容量</th><th>今日已入</th><th>等池条数</th><th>当日口径名字</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>{{ overview.capacity }}</strong></td>
+        <td>{{ stats.admitted_today }}（全站 {{ overview.used }} / {{ overview.capacity }}）</td>
+        <td>{{ stats.waiting_today }}</td>
+        <td><span class="tag policy">{{ overview.policy_name }}</span></td>
+      </tr>
+    </tbody>
+  </table>
   {% if job.status == 'draft' %}
   <form method="post" action="{{ url_for('jobs.run_job_view', job_id=job.id) }}">
     <button type="submit">运行采集（同步）</button>
   </form>
+  {% elif job.status == 'running' %}
+  <p class="notice warn">任务正在占用池子运行中，不能再点继续。</p>
   {% elif job.status == 'done' %}
   <p class="muted">已完成于 {{ job.finished_at or '—' }}</p>
   {% endif %}
+
+  {% if waiting %}
+  <form method="post" action="{{ url_for('jobs.continue_job_view', job_id=job.id) }}" class="continue-form">
+    <input type="hidden" name="claimed_policy" value="{{ overview.policy }}" />
+    <button type="submit" {% if job.status == 'running' %}disabled{% endif %}>
+      继续（按今日池容量与「{{ overview.policy_name }}」重算等池）
+    </button>
+    {% if job.status == 'running' %}
+    <span class="muted">跑着的任务不能再点继续</span>
+    {% endif %}
+  </form>
+  {% endif %}
 </section>
+
 <section class="card">
-  <h2>落库记录</h2>
+  <h2>等池顺序 <span class="muted">（候补栏，含跨日积压，按全局排队先后）</span></h2>
   <table>
-    <thead><tr><th>item_key</th><th>标题</th><th>时间</th></tr></thead>
+    <thead><tr><th>排队顺序</th><th>入池日期</th><th>合法编码</th><th>标题</th></tr></thead>
+    <tbody>
+      {% for w in waiting %}
+      <tr>
+        <td>#{{ w.seq }}</td>
+        <td>{{ w.pool_day }}</td>
+        <td><code>{{ w.item_code }}</code></td>
+        <td>{{ w.title }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">本任务没有等池条目</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">
+    跨日之后昨天的等池不会自动入账，需点「继续」；继续时按新一天的池容量和当日口径重算。
+  </p>
+</section>
+
+<section class="card">
+  <h2>池争用提示</h2>
+  <ul class="event-list">
+    {% for e in events %}
+    <li class="event {{ 'err' if e.event_type in ('池争用', '切法不对') else 'warn' }}">
+      <span class="tag {{ 'failed' if e.event_type in ('池争用', '切法不对') else 'draft' }}">{{ e.event_type }}</span>
+      <span class="muted">{{ e.event_day }} · {{ e.created_at }}</span>
+      <span>{{ e.detail }}</span>
+    </li>
+    {% else %}
+    <li class="muted">暂无池争用或切法拦截记录</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <h2>落库账册</h2>
+  <table>
+    <thead><tr><th>item_key</th><th>编码</th><th>标题</th><th>入账池日</th><th>入账时间</th></tr></thead>
     <tbody>
       {% for r in records %}
       <tr>
         <td><code>{{ r.item_key }}</code></td>
+        <td>{% if r.item_code %}<code>{{ r.item_code }}</code>{% else %}<span class="muted">空</span>{% endif %}</td>
         <td>{{ r.title }}</td>
-        <td>{{ r.fetched_at }}</td>
+        <td>{{ r.pool_day or '—' }}</td>
+        <td>{{ r.admitted_at or r.fetched_at }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="3" class="muted">尚无记录</td></tr>
+      <tr><td colspan="5" class="muted">尚无记录</td></tr>
       {% endfor %}
     </tbody>
   </table>

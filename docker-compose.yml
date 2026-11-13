@@ -1,7 +1,7 @@
 services:
   crawl-lab:
     build: .
-    container_name: cc-data-lab-data-12
+    container_name: cc-data-lab-data-12-data-12
     ports:
       - "5700:5590"
     environment:

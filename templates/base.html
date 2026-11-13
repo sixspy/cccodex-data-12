@@ -12,6 +12,10 @@
     <strong>Crawl Lab</strong>
     <span class="muted">数据工程基线 · 采集任务编排</span>
     {% if session.get('user') %}
+    <nav class="topnav">
+      <a href="{{ url_for('jobs.list_jobs') }}">任务与等池</a>
+      <a href="{{ url_for('settings.settings_page') }}">入库池设置</a>
+    </nav>
     <form class="logout" method="post" action="{{ url_for('auth.logout') }}">
       <span>{{ session.user }}</span>
       <button type="submit">退出</button>

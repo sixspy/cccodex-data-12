@@ -15,6 +15,8 @@ def app():
     application = create_app()
     application.config["DATABASE"] = path
     application.config["TESTING"] = True
+    # 测试默认把后台日期钉死，跨日用例显式改这个值
+    application.config["POOL_DATE"] = "2026-11-12"
     with application.app_context():
         init_db(application)
     yield application

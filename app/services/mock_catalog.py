@@ -7,6 +7,7 @@ CATALOGS = {
         {"sku": "A-001", "title": "市政管线测绘记录表"},
         {"sku": "A-002", "title": "排水井巡查台账"},
         {"sku": "A-003", "title": "排水井巡查台账"},
+        {"sku": "", "title": "无编码临时条目"},
     ],
     "/mock/catalog/beta": [
         {"sku": "B-101", "title": "泵站运行日报"},
@@ -40,8 +41,9 @@ def parse_catalog_html(html: str, seed_path: str) -> list[dict]:
     """极简解析：从 &lt;li data-sku&gt; 抽条目（基线够用，后续题可换解析器）。"""
     import re
 
+    # 允许空 sku（data-sku=''）：空编码行由入库池判定为不占池、不进等池
     pattern = re.compile(
-        r"<li\s+data-sku='([^']+)'\s*>([^<]+)</li>",
+        r"<li\s+data-sku='([^']*)'\s*>([^<]+)</li>",
         re.IGNORECASE,
     )
     out = []

@@ -21,10 +21,12 @@ def create_app(config_class=Config):
     from app.routes.auth import bp as auth_bp
     from app.routes.jobs import bp as jobs_bp
     from app.routes.mock import bp as mock_bp
+    from app.routes.settings import bp as settings_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(mock_bp)
+    app.register_blueprint(settings_bp)
 
     init_db(app)
     return app
